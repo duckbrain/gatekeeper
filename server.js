@@ -32,7 +32,9 @@ function authenticate(code, cb) {
   var data = qs.stringify({
     client_id: config.oauth_client_id,
     client_secret: config.oauth_client_secret,
-    code: code
+    code: code,
+    grant_type: 'authorization_code',
+    redirect_uri: config.redirect_url,
   });
 
   var reqOptions = {
@@ -48,7 +50,14 @@ function authenticate(code, cb) {
     res.setEncoding('utf8');
     res.on('data', function (chunk) { body += chunk; });
     res.on('end', function() {
-      cb(null, qs.parse(body).access_token);
+      var p;
+      try {
+        p = JSON.parse(body);
+      } catch (ex) {
+        p = qs.parse(body);
+      }
+      console.log('gitlab', reqOptions, data, body, p, typeof p);
+      cb(null, p.access_token);
     });
   });
 
@@ -94,7 +103,7 @@ app.get('/authenticate/:code', function(req, res) {
     var result
     if ( err || !token ) {
       result = {"error": err || "bad_code"};
-      log(result.error);
+      log(result.error, token);
     } else {
       result = {"token": token};
       log("token", result.token, true);
